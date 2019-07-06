@@ -145,10 +145,13 @@ public class HpcAttack implements Callable<String>{
 		CountDownLatch latch;
 		int jobFrom;
 		int jobSize;
+		int processedWords;
 		int wordsPerIteration;
+		String currentWord;
 		   
 		Slave(int threadId, CountDownLatch latch, int wordsPerIteration){
 		    id = threadId; 
+		    processedWords = 0;
 		    jobFrom = 0;
 		    jobSize = 1;
 		    this.wordsPerIteration = wordsPerIteration;
@@ -163,21 +166,22 @@ public class HpcAttack implements Callable<String>{
 			{
 				for (int i = jobFrom; !found && i < jobFrom + jobSize; i++)
 				{
-					String word = wordList.get(i);
+					currentWord = wordList.get(i);
 					for (int j = 0; !found && j < figuresCombinations.size(); j++)
 					{
-						for (int k = 0; !found && k < angleCombinations.get(word.length() - 1).size(); k++) {
-							ArrayList<Double> rotations = angleCombinations.get(word.length() - 1).get(k);
+						for (int k = 0; !found && k < angleCombinations.get(currentWord.length() - 1).size(); k++) {
+							ArrayList<Double> rotations = angleCombinations.get(currentWord.length() - 1).get(k);
 							ArrayList<ArrayList<Integer>> squares = figuresCombinations.get(j);
-							BufferedImage generatedImage = captchaGenerator.getCaptchaImageFromString(word, squares, rotations);
+							BufferedImage generatedImage = captchaGenerator.getCaptchaImageFromString(currentWord, squares, rotations);
 
 							if (compareImages(image,generatedImage))
 							{
 								found = true;
-								foundWord = word;
+								foundWord = currentWord;
 							}
 						}
 					}
+					processedWords++;
 				}
 				getJob(this);
 			}
