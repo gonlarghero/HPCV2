@@ -7,9 +7,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
@@ -17,8 +17,8 @@ import java.util.concurrent.Semaphore;
 public class HpcAttack implements Callable<String>{
 	
 	private BufferedImage image;
-	private static List<String> wordList;
-	private static Integer currentWord = 0;
+	private static Integer totalBlocks = 0;
+	private static Integer currentBlock = 0;
 	private int threadCount;
 	private CountDownLatch latch;
 	private int wordLength = 6;
@@ -26,21 +26,30 @@ public class HpcAttack implements Callable<String>{
 	private static boolean found = false;
 	private Semaphore mutex = new Semaphore(1);
 	private ArrayList<Slave> threadList;
+	private List<Integer> blocksPerThread;
 	private ArrayList<ArrayList<ArrayList<Double>>> angleCombinations = new ArrayList<ArrayList<ArrayList<Double>>>();
 	private ArrayList<ArrayList<ArrayList<Integer>>> figuresCombinations = new ArrayList<ArrayList<ArrayList<Integer>>>();
 	private int blockSize = 1;
+	private List<List<String>> blocks;
+	
+	//why??
 	private int wordsPerIteration;
-	int wordListSize;
 	
 	public HpcAttack(BufferedImage img, Integer threadCount) throws IOException {	
-		image = img;
+	 	image = img;
 		this.threadCount = threadCount;
+		List<String> wordList;
 		wordList = readFile("/dictionary.txt");
-		wordListSize = wordList.size();
+		java.util.Collections.sort(wordList, new StringLengthComparator()); 
+		blocks = chopped(wordList,blockSize);
+		totalBlocks = blocks.size();
 		generateAngleCombinations(wordLength);
 		generateFiguresCombinations();
 		threadList = new ArrayList<Slave>();
 		latch = new CountDownLatch(threadCount);
+		blocksPerThread =  Collections.nCopies(threadCount, 0);
+		
+		//why?
 		wordsPerIteration = this.threadCount * blockSize;
 		
 	}
@@ -97,8 +106,8 @@ public class HpcAttack implements Callable<String>{
 		try {
 			mutex.acquire();			
 			
-			if (!found && currentWord < wordListSize)	{
-				if (slave.wordsPerIteration + slave.jobFrom > currentWord)
+			if (!found && currentBlock < totalBlocks)	{
+				if ( slave.blockIndex > currentWord)
 				{
 					slave.jobSize = slave.jobSize + blockSize;
 					wordsPerIteration = wordsPerIteration + blockSize;
@@ -115,9 +124,9 @@ public class HpcAttack implements Callable<String>{
 				currentWord = currentWord + slave.jobSize;
 			}
 			else {
-				slave.jobSize = 0;
-			}
-			
+				slave.blocksCant = 0;
+			}			
+			blocksPerThread.add(slave.id, blocksPerThread.get(slave.id) + slave.blocksCant);
 			mutex.release();
         }
 		catch (Exception x) {
@@ -143,18 +152,24 @@ public class HpcAttack implements Callable<String>{
 		Thread t;
 		int id;
 		CountDownLatch latch;
+		Integer blockIndex;
+		int blocksCant;
+		String word;
+		
+		/*
 		int jobFrom;
 		int jobSize;
 		int processedWords;
 		int wordsPerIteration;
-		String currentWord;
+		*/
 		   
 		Slave(int threadId, CountDownLatch latch, int wordsPerIteration){
 		    id = threadId; 
+		    /*
 		    processedWords = 0;
 		    jobFrom = 0;
 		    jobSize = 1;
-		    this.wordsPerIteration = wordsPerIteration;
+		    this.wordsPerIteration = wordsPerIteration;*/
 	        this.latch = latch;
 		    t = new Thread(this, Integer.toString(id));
 		    t.start();
@@ -162,27 +177,28 @@ public class HpcAttack implements Callable<String>{
 		
 		public void run(){
 			getJob(this); 
-			while(!found && jobSize != 0)
+			while(!found && blocksCant != 0)
 			{
-				for (int i = jobFrom; !found && i < jobFrom + jobSize; i++)
+				for (int i = 0; !found && i < blocks.get(blockIndex).size(); i++)
 				{
-					currentWord = wordList.get(i);
+					word = blocks.get(blockIndex).get(i);
 					for (int j = 0; !found && j < figuresCombinations.size(); j++)
 					{
-						for (int k = 0; !found && k < angleCombinations.get(currentWord.length() - 1).size(); k++) {
-							ArrayList<Double> rotations = angleCombinations.get(currentWord.length() - 1).get(k);
+						for (int k = 0; !found && k < angleCombinations.get(word.length() - 1).size(); k++) {
+							ArrayList<Double> rotations = angleCombinations.get(word.length() - 1).get(k);
 							ArrayList<ArrayList<Integer>> squares = figuresCombinations.get(j);
-							BufferedImage generatedImage = captchaGenerator.getCaptchaImageFromString(currentWord, squares, rotations);
+							BufferedImage generatedImage = captchaGenerator.getCaptchaImageFromString(word, squares, rotations);
 
 							if (compareImages(image,generatedImage))
 							{
 								found = true;
-								foundWord = currentWord;
+								foundWord = word;
 							}
 						}
-					}
-					processedWords++;
-				}
+					}	
+					blockIndex++;
+					blocksCant--;
+				}				
 				getJob(this);
 			}
 			latch.countDown();
@@ -209,23 +225,7 @@ public class HpcAttack implements Callable<String>{
 
 			  return true;
 			}
-	}
-
-	public static Integer getCurrentWord() {
-		return currentWord;
-	}
-
-	public static void setCurrentWord(Integer currentWord) {
-		HpcAttack.currentWord = currentWord;
-	}
-
-	public static List<String> getWordList() {
-		return wordList;
-	}
-
-	public static void setWordList(List<String> wordList) {
-		HpcAttack.wordList = wordList;
-	}
+	}	
 
 	public static boolean isFound() {
 		return found;
@@ -251,9 +251,25 @@ public class HpcAttack implements Callable<String>{
 	}
 	
 	public int progress() {
-		if(wordList != null && !wordList.isEmpty()) {
-			return currentWord * 100 / wordList.size();
+		return currentBlock * 100 / totalBlocks;	
+	}	
+	
+	class StringLengthComparator implements Comparator<String> {
+
+		@Override
+		public int compare(String s1, String s2) {
+			return s1.length() - s2.length(); // compare length of Strings
 		}
-		return 0;
-	}		
+	}
+	
+	static <T> List<List<T>> chopped(List<T> list, final int L) {
+	    List<List<T>> parts = new ArrayList<List<T>>();
+	    final int N = list.size();
+	    for (int i = 0; i < N; i += L) {
+	        parts.add(new ArrayList<T>(
+	            list.subList(i, Math.min(N, i + L)))
+	        );
+	    }
+	    return parts;
+	}
 }
