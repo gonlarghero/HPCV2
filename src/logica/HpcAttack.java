@@ -1,4 +1,4 @@
-package logica;
+package logica; 
 
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
@@ -20,27 +20,28 @@ public class HpcAttack implements Callable<String>{
 	private static List<String> wordList;
 	private static Integer currentWord = 0;
 	private int threadCount;
-	private int jobSize = 1;
 	private CountDownLatch latch;
-	private int wordLength = 4;
-	private String foundWord = "noup";
+	private int wordLength = 6;
+	private String foundWord = "word not found";
 	private static boolean found = false;
-	private ArrayList<Slave> threadList;
 	private Semaphore mutex = new Semaphore(1);
-	private Map<Integer, List<String>> slavesJob = new HashMap<Integer, List<String>>();
+	private ArrayList<Slave> threadList;
 	private ArrayList<ArrayList<ArrayList<Double>>> angleCombinations = new ArrayList<ArrayList<ArrayList<Double>>>();
 	private ArrayList<ArrayList<ArrayList<Integer>>> figuresCombinations = new ArrayList<ArrayList<ArrayList<Integer>>>();
-    
-	public static ArrayList<Double> test = new ArrayList<>();
+	private int blockSize = 1;
+	private int wordsPerIteration;
+	int wordListSize;
 	
 	public HpcAttack(BufferedImage img, Integer threadCount) throws IOException {	
 		image = img;
 		this.threadCount = threadCount;
 		wordList = readFile("/dictionary.txt");
+		wordListSize = wordList.size();
 		generateAngleCombinations(wordLength);
 		generateFiguresCombinations();
 		threadList = new ArrayList<Slave>();
 		latch = new CountDownLatch(threadCount);
+		wordsPerIteration = this.threadCount * blockSize;
 		
 	}
 		
@@ -64,7 +65,6 @@ public class HpcAttack implements Callable<String>{
 				clone.add(rotation_clean);
 				ret.add(clone);
 			}
-			
 		}
 		angleCombinations.add(ret);
 		return ret;
@@ -93,33 +93,35 @@ public class HpcAttack implements Callable<String>{
 		
 	}
 	
-	private List<String> getJob(int currentThread){
+	private void getJob(Slave slave){
 		try {
-			mutex.acquire();
+			mutex.acquire();			
 			
-			List<String> job = new ArrayList<String>();
-			
-			if (!found)
-			{
-				Integer limit;
-				if (currentWord + jobSize <= wordList.size()) {
-					limit = currentWord + jobSize;
+			if (!found && currentWord < wordListSize)	{
+				if (slave.wordsPerIteration + slave.jobFrom > currentWord)
+				{
+					slave.jobSize = slave.jobSize + blockSize;
+					wordsPerIteration = wordsPerIteration + blockSize;
 				}
-				else {
-					limit = wordList.size();
+				
+				slave.wordsPerIteration = wordsPerIteration;
+				
+				if (currentWord + slave.jobSize > wordListSize)
+				{
+					slave.jobSize = wordListSize - currentWord;
 				}
-				job = wordList.subList(currentWord, limit);
-				slavesJob.put(currentThread, job);
-				currentWord = limit;
-			}			
+				
+				slave.jobFrom = currentWord;
+				currentWord = currentWord + slave.jobSize;
+			}
+			else {
+				slave.jobSize = 0;
+			}
 			
 			mutex.release();
-			
-			return job;
         }
 		catch (Exception x) {
 			x.printStackTrace();
-			return new ArrayList<String>();
 		}
 	}
 
@@ -140,23 +142,28 @@ public class HpcAttack implements Callable<String>{
 	public class Slave implements Runnable {
 		Thread t;
 		int id;
-		List<String> currentJob;
 		CountDownLatch latch;
+		int jobFrom;
+		int jobSize;
+		int wordsPerIteration;
 		   
-		Slave(int threadId, CountDownLatch latch){
+		Slave(int threadId, CountDownLatch latch, int wordsPerIteration){
 		    id = threadId; 
+		    jobFrom = 0;
+		    jobSize = 1;
+		    this.wordsPerIteration = wordsPerIteration;
 	        this.latch = latch;
 		    t = new Thread(this, Integer.toString(id));
 		    t.start();
 		}
 		
 		public void run(){
-			currentJob = getJob(id);
-			while (currentJob.size() > 0 && !found)
+			getJob(this); 
+			while(!found && jobSize != 0)
 			{
-				for (int i = 0; !found && i < currentJob.size(); i++)
+				for (int i = jobFrom; !found && i < jobFrom + jobSize; i++)
 				{
-					String word = currentJob.get(i);
+					String word = wordList.get(i);
 					for (int j = 0; !found && j < figuresCombinations.size(); j++)
 					{
 						for (int k = 0; !found && k < angleCombinations.get(word.length() - 1).size(); k++) {
@@ -172,7 +179,7 @@ public class HpcAttack implements Callable<String>{
 						}
 					}
 				}
-				currentJob = getJob(id);
+				getJob(this);
 			}
 			latch.countDown();
 		}
@@ -227,7 +234,7 @@ public class HpcAttack implements Callable<String>{
 	@Override
 	public String call() throws Exception {
 		for (int i = 0; i < threadCount; i++) {
-			threadList.add(new Slave(i, latch));
+			threadList.add(i, new Slave(i, latch, wordsPerIteration));
 		}
 		
 		 try {
@@ -244,5 +251,5 @@ public class HpcAttack implements Callable<String>{
 			return currentWord * 100 / wordList.size();
 		}
 		return 0;
-	}
+	}		
 }

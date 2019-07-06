@@ -115,7 +115,7 @@ public class window extends JPanel
         //Instances of javax.swing.SwingWorker are not reusuable, so
         //we create new instances as needed.
         try {
-			atacante = new HpcAttack(c.getShownCaptcha(),1);
+			atacante = new HpcAttack(c.getShownCaptcha(),3);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
