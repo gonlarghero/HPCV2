@@ -21,7 +21,7 @@ public class HpcAttack implements Callable<String>{
 	private static Integer currentBlock = 0;
 	private int threadCount;
 	private CountDownLatch latch;
-	private int wordLength = 6;
+	private int wordLength = 4;
 	private String foundWord = "word not found";
 	private static boolean found = false;
 	private ArrayList<Semaphore> mutexList;
@@ -33,12 +33,16 @@ public class HpcAttack implements Callable<String>{
 	private int blockSize = 1;
 	private int currentIteration = 1;
 	private int iterationCount = 10;
+	List<String> wordList;
 	
-	public HpcAttack(BufferedImage img, Integer threadCount) throws IOException {	
+	public HpcAttack(BufferedImage img, Integer threadCount,boolean bf) throws IOException {	
 	 	image = img;
 		this.threadCount = threadCount;
-		List<String> wordList;
-		wordList = readFile("/dictionary.txt");
+		if (bf) {
+			wordList = generateWordCombinations(wordLength);
+		}else {
+			wordList = readFile("/dictionary.txt");
+		}		
 		java.util.Collections.sort(wordList, new StringLengthComparator()); 
 		blocks = chopped(wordList,blockSize);
 		totalBlocksCount = blocks.size();
@@ -72,6 +76,26 @@ public class HpcAttack implements Callable<String>{
 			}
 		}
 		angleCombinations.add(ret);
+		return ret;
+	}
+	
+	private ArrayList<String> generateWordCombinations(int wordLength) {
+		ArrayList<String> ret = new ArrayList<>();
+		if(wordLength != 1) {			
+			ArrayList<String> aux = generateWordCombinations(wordLength -1);
+			for(String r:aux) {
+				for (int chara = 97; chara <= 122; chara++) {
+					String clone = r.concat(Character.toString((char) chara));
+					ret.add(clone);
+				}
+			}
+		}else {		
+			for (int chara = 97; chara <= 122; chara++) {
+				String clone = Character.toString((char) chara);
+				ret.add(clone);
+			}
+		}
+		wordList.addAll(ret);
 		return ret;
 	}
 	

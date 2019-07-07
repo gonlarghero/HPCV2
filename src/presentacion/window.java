@@ -30,6 +30,7 @@ public class window extends JPanel
     private JLabel imageLabel;
     private HpcAttack atacante;
     private Future<String> result;
+    private JTextField textField;
     
     class Task extends SwingWorker<Void, Void> {
     	ExecutorService servicio;
@@ -67,7 +68,15 @@ public class window extends JPanel
             startButton.setEnabled(true);
             setCursor(null); //turn off the wait cursor
             servicio.shutdown();
-        	JOptionPane.showMessageDialog(null, ret, "Resultado", JOptionPane.INFORMATION_MESSAGE);
+            if (ret.equals("word not found")) {
+            	ret += " \n ¿desea atacar por fuerza bruta?";
+            	int reply = JOptionPane.showConfirmDialog(null, ret, "Resultado", JOptionPane.YES_NO_OPTION);
+                if (reply == JOptionPane.YES_OPTION) {
+                  JOptionPane.showMessageDialog(null, "FUERZA BRUTA :v");
+                }
+            }else {
+            	JOptionPane.showMessageDialog(null, ret, "Resultado", JOptionPane.INFORMATION_MESSAGE);
+            }
         }
     }
  
@@ -91,12 +100,21 @@ public class window extends JPanel
         btnRefresh = new JButton("Refresh");
         btnRefresh.addActionListener(new ActionListener() {
         	public void actionPerformed(ActionEvent e) {
-        		imageLabel.setIcon(new ImageIcon(c.getRandomCaptcha()));
+        		String t = textField.getText();
+        		if(t == null || t.trim().equals("") || t.matches("-?\\d+")) {
+        			imageLabel.setIcon(new ImageIcon(c.getRandomCaptcha()));
+        		}else {
+        			imageLabel.setIcon(new ImageIcon(c.getCaptchaFromString(t)));
+        		}
         	}
         });
         
         panel.add(btnRefresh);
         panel.add(startButton);
+        
+        textField = new JTextField();
+        panel.add(textField);
+        textField.setColumns(10);
         panel.add(progressBar);
         imagePanel.add(imageLabel);
  
@@ -114,8 +132,14 @@ public class window extends JPanel
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         //Instances of javax.swing.SwingWorker are not reusuable, so
         //we create new instances as needed.
-        try {
-			atacante = new HpcAttack(c.getShownCaptcha(),3);
+        Integer threads;
+        if (textField.getText() != null && textField.getText().matches("-?\\d+")) {
+        	threads = Integer.parseInt(textField.getText());
+        }else{
+        	threads = 3;
+        }
+        try {        	
+			atacante = new HpcAttack(c.getShownCaptcha(),threads,false);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
