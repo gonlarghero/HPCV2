@@ -7,8 +7,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -17,23 +17,22 @@ import java.util.concurrent.Semaphore;
 public class HpcAttack implements Callable<String>{
 	
 	private BufferedImage image;
-	private static Integer totalBlocks = 0;
+	private static Integer totalBlocksCount = 0;
 	private static Integer currentBlock = 0;
 	private int threadCount;
 	private CountDownLatch latch;
 	private int wordLength = 6;
 	private String foundWord = "word not found";
 	private static boolean found = false;
-	private Semaphore mutex = new Semaphore(1);
+	private ArrayList<Semaphore> mutexList;
 	private ArrayList<Slave> threadList;
-	private List<Integer> blocksPerThread;
+	private List<List<String>> blocks;
+	private List<LinkedList<Integer>> threadQueues;
 	private ArrayList<ArrayList<ArrayList<Double>>> angleCombinations = new ArrayList<ArrayList<ArrayList<Double>>>();
 	private ArrayList<ArrayList<ArrayList<Integer>>> figuresCombinations = new ArrayList<ArrayList<ArrayList<Integer>>>();
 	private int blockSize = 1;
-	private List<List<String>> blocks;
-	
-	//why??
-	private int wordsPerIteration;
+	private int currentIteration = 1;
+	private int iterationCount = 10;
 	
 	public HpcAttack(BufferedImage img, Integer threadCount) throws IOException {	
 	 	image = img;
@@ -42,16 +41,13 @@ public class HpcAttack implements Callable<String>{
 		wordList = readFile("/dictionary.txt");
 		java.util.Collections.sort(wordList, new StringLengthComparator()); 
 		blocks = chopped(wordList,blockSize);
-		totalBlocks = blocks.size();
+		totalBlocksCount = blocks.size();
+		threadQueues = new ArrayList<LinkedList<Integer>>();
 		generateAngleCombinations(wordLength);
 		generateFiguresCombinations();
 		threadList = new ArrayList<Slave>();
-		latch = new CountDownLatch(threadCount);
-		blocksPerThread =  Collections.nCopies(threadCount, 0);
-		
-		//why?
-		wordsPerIteration = this.threadCount * blockSize;
-		
+		mutexList = new ArrayList<Semaphore>();
+		latch = new CountDownLatch(threadCount);		
 	}
 		
 	private ArrayList<ArrayList<Double>> generateAngleCombinations(int wordLength) {
@@ -103,31 +99,17 @@ public class HpcAttack implements Callable<String>{
 	}
 	
 	private void getJob(Slave slave){
-		try {
-			mutex.acquire();			
-			
-			if (!found && currentBlock < totalBlocks)	{
-				if ( slave.blockIndex > currentWord)
-				{
-					slave.jobSize = slave.jobSize + blockSize;
-					wordsPerIteration = wordsPerIteration + blockSize;
-				}
-				
-				slave.wordsPerIteration = wordsPerIteration;
-				
-				if (currentWord + slave.jobSize > wordListSize)
-				{
-					slave.jobSize = wordListSize - currentWord;
-				}
-				
-				slave.jobFrom = currentWord;
-				currentWord = currentWord + slave.jobSize;
+		try {			
+			LinkedList<Integer> queue = threadQueues.get(slave.id);
+			if (!found && queue.size() > 0)	{				
+				slave.currentBlock = queue.getFirst();	
+			}
+			else if (found) {
+				slave.currentBlock = -1;
 			}
 			else {
-				slave.blocksCant = 0;
-			}			
-			blocksPerThread.add(slave.id, blocksPerThread.get(slave.id) + slave.blocksCant);
-			mutex.release();
+				fillInQueues(slave.id);
+			}
         }
 		catch (Exception x) {
 			x.printStackTrace();
@@ -152,24 +134,12 @@ public class HpcAttack implements Callable<String>{
 		Thread t;
 		int id;
 		CountDownLatch latch;
-		Integer blockIndex;
-		int blocksCant;
 		String word;
-		
-		/*
-		int jobFrom;
-		int jobSize;
-		int processedWords;
-		int wordsPerIteration;
-		*/
+		int processedBlocks;
+		int currentBlock;
 		   
-		Slave(int threadId, CountDownLatch latch, int wordsPerIteration){
+		Slave(int threadId, CountDownLatch latch){
 		    id = threadId; 
-		    /*
-		    processedWords = 0;
-		    jobFrom = 0;
-		    jobSize = 1;
-		    this.wordsPerIteration = wordsPerIteration;*/
 	        this.latch = latch;
 		    t = new Thread(this, Integer.toString(id));
 		    t.start();
@@ -177,11 +147,11 @@ public class HpcAttack implements Callable<String>{
 		
 		public void run(){
 			getJob(this); 
-			while(!found && blocksCant != 0)
+			while(!found && currentBlock != -1) // currentBlock -1 es que no hay mas na'
 			{
-				for (int i = 0; !found && i < blocks.get(blockIndex).size(); i++)
+				for (int i = 0; !found && i < blocks.get(currentBlock).size(); i++)
 				{
-					word = blocks.get(blockIndex).get(i);
+					word = blocks.get(currentBlock).get(i);
 					for (int j = 0; !found && j < figuresCombinations.size(); j++)
 					{
 						for (int k = 0; !found && k < angleCombinations.get(word.length() - 1).size(); k++) {
@@ -195,10 +165,16 @@ public class HpcAttack implements Callable<String>{
 								foundWord = word;
 							}
 						}
-					}	
-					blockIndex++;
-					blocksCant--;
-				}				
+					}
+				}
+				processedBlocks++;
+				try {
+					mutexList.get(id).acquire();				
+					threadQueues.get(id).pollFirst(); // cada thread hace un poll cuando termina, no lo hace getJob
+					mutexList.get(id).release();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 				getJob(this);
 			}
 			latch.countDown();
@@ -238,8 +214,15 @@ public class HpcAttack implements Callable<String>{
 	@Override
 	public String call() throws Exception {
 		for (int i = 0; i < threadCount; i++) {
-			threadList.add(i, new Slave(i, latch, wordsPerIteration));
+			mutexList.add(i, new Semaphore(1));
 		}
+		
+		for (int i = 0; i < threadCount; i++) {
+			threadQueues.add(i, new LinkedList<Integer>());
+			threadList.add(i, new Slave(i, latch));
+		}
+		
+		fillInQueues(-1);
 		
 		 try {
 			latch.await();
@@ -251,7 +234,7 @@ public class HpcAttack implements Callable<String>{
 	}
 	
 	public int progress() {
-		return currentBlock * 100 / totalBlocks;	
+		return currentBlock * 100 / totalBlocksCount;	
 	}	
 	
 	class StringLengthComparator implements Comparator<String> {
@@ -271,5 +254,92 @@ public class HpcAttack implements Callable<String>{
 	        );
 	    }
 	    return parts;
+	}
+	
+	private void fillInQueues(int currentThread) throws InterruptedException {
+		ArrayList<Double> blocksRatioPerThread = new ArrayList<Double>();
+		// hago los mutex
+		for (int i = 0; i < threadCount; i++)
+		{
+			mutexList.get(i).acquire();
+		}
+		
+		// si es la primera iteración parto en partes iguales
+		if (currentIteration == 1)
+		{
+			for (int i = 0; i < threadCount; i++)
+			{
+				blocksRatioPerThread.add(i,  (double)1 / (double)threadCount);
+			}
+		}
+		else // si no es la primera iteración 
+		{
+			// calculo el total
+			int totalProccessedBlocks = 0;
+			for (int i = 0; i < threadCount; i++)
+			{
+				totalProccessedBlocks = totalProccessedBlocks + threadList.get(i).processedBlocks;
+			}
+
+			// calculo el porcentaje por cada thread
+			for (int i = 0; i < threadCount; i++)
+			{
+				blocksRatioPerThread.add(i, ((double)threadList.get(i).processedBlocks / (double)totalProccessedBlocks));
+			}
+		}
+		
+		if (currentIteration <= iterationCount) // si todavía no llegó la etapa de robo
+		{
+			// agarro los bloques correspondientes a mi iteración
+			List<List<String>> iterationBlocks = blocks.subList((int)((currentIteration - 1) * ((double)totalBlocksCount / (double)iterationCount)),(int)( (currentIteration) * ((double)totalBlocksCount / (double)iterationCount)));
+			
+			//asigno un poco para cada thread según su porcentaje
+			for (int i = 0; i < threadCount; i++)
+			{
+				int toIndex = currentBlock + (int)(iterationBlocks.size() * blocksRatioPerThread.get(i));
+				for (int j = currentBlock; j < toIndex; j++)
+				{
+					threadQueues.get(i).add(j);				
+				}
+				currentBlock = toIndex;
+			}		
+			
+			currentIteration++;				
+		}
+		else // si llegamos a la etapa de robo
+		{
+			//encuentro al que tiene mas trabajo
+			int busiestWorkQueueIndex = 0;
+			for (int i = 1; i < threadCount; i++)
+			{
+				if (threadQueues.get(i).size() > threadQueues.get(busiestWorkQueueIndex).size())
+				{
+					busiestWorkQueueIndex = i;
+				}
+			}
+			LinkedList<Integer> busiestWorkQueue = threadQueues.get(busiestWorkQueueIndex);
+			
+			if (busiestWorkQueue.size() > 1) // si queda trabajo
+			{
+				// le saco un trozo correspondiente a mi porcentaje
+				int toIndex = 1 + (int)(busiestWorkQueue.size() * blocksRatioPerThread.get(currentThread));
+				for (int j = 1; j < toIndex; j++)
+				{
+					threadQueues.get(currentThread).add(busiestWorkQueue.get(j));					;
+					busiestWorkQueue.remove(j);				
+				}
+			}
+			else // si no queda más trabajo
+			{
+				threadList.get(currentThread).currentBlock = -1;
+			}
+			
+		}		
+		
+		// libero
+		for (int i = 0; i < threadCount; i++)
+		{
+			mutexList.get(i).release();
+		}
 	}
 }
