@@ -146,38 +146,38 @@ public class HpcAttack implements Callable<String>{
 		}
 		
 		public void run(){
-			getJob(this); 
-			while(!found && currentBlock != -1) // currentBlock -1 es que no hay mas na'
-			{
-				for (int i = 0; !found && i < blocks.get(currentBlock).size(); i++)
+			try {
+				getJob(this); 
+				while(!found && currentBlock != -1) // currentBlock -1 es que no hay mas na'
 				{
-					word = blocks.get(currentBlock).get(i);
-					for (int j = 0; !found && j < figuresCombinations.size(); j++)
+					for (int i = 0; !found && i < blocks.get(currentBlock).size(); i++)
 					{
-						for (int k = 0; !found && k < angleCombinations.get(word.length() - 1).size(); k++) {
-							ArrayList<Double> rotations = angleCombinations.get(word.length() - 1).get(k);
-							ArrayList<ArrayList<Integer>> squares = figuresCombinations.get(j);
-							BufferedImage generatedImage = captchaGenerator.getCaptchaImageFromString(word, squares, rotations);
-
-							if (compareImages(image,generatedImage))
-							{
-								found = true;
-								foundWord = word;
+						word = blocks.get(currentBlock).get(i);
+						for (int j = 0; !found && j < figuresCombinations.size(); j++)
+						{
+							for (int k = 0; !found && k < angleCombinations.get(word.length() - 1).size(); k++) {
+								ArrayList<Double> rotations = angleCombinations.get(word.length() - 1).get(k);
+								ArrayList<ArrayList<Integer>> squares = figuresCombinations.get(j);
+								BufferedImage generatedImage = captchaGenerator.getCaptchaImageFromString(word, squares, rotations);
+	
+								if (compareImages(image,generatedImage))
+								{
+									found = true;
+									foundWord = word;
+								}
 							}
 						}
 					}
-				}
-				processedBlocks++;
-				try {
+					processedBlocks++;
 					mutexList.get(id).acquire();				
 					threadQueues.get(id).pollFirst(); // cada thread hace un poll cuando termina, no lo hace getJob
 					mutexList.get(id).release();
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+					getJob(this);
 				}
-				getJob(this);
+				latch.countDown();
+			} catch (Exception e) {
+				replaceThread(id);
 			}
-			latch.countDown();
 		}
 		
 		public boolean compareImages(BufferedImage imgA, BufferedImage imgB) {
@@ -341,5 +341,9 @@ public class HpcAttack implements Callable<String>{
 		{
 			mutexList.get(i).release();
 		}
+	}
+	
+	private void replaceThread(int threadId) {
+		threadList.add(threadId, new Slave(threadId, latch));
 	}
 }
