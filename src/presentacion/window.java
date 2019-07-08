@@ -134,12 +134,12 @@ public class window extends JPanel implements ActionListener,PropertyChangeListe
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         //Instances of javax.swing.SwingWorker are not reusuable, so
         //we create new instances as needed.
-        /*
+        
         if (textField.getText() != null && textField.getText().matches("-?\\d+")) {
         	threads = Integer.parseInt(textField.getText());
-        }else{*/
-        	threads = 3;/*
-        }*/
+        }else{
+        	threads = 3;
+        }
         try {        	
 			atacante = new HpcAttack(c.getShownCaptcha(),threads,false);
 		} catch (IOException e) {
