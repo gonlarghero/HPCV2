@@ -33,10 +33,11 @@ public class HpcAttack implements Callable<String>{
 	private int blockSize = 1;
 	private int currentIteration = 1;
 	private int iterationCount = 10;
-	List<String> wordList;
+	private List<String> wordList;
 	
 	public HpcAttack(BufferedImage img, Integer threadCount,boolean bf) throws IOException {	
 	 	image = img;
+	 	currentBlock = 0;
 		this.threadCount = threadCount;
 		if (bf) {
 			wordList = generateWordCombinations(wordLength);
@@ -369,5 +370,13 @@ public class HpcAttack implements Callable<String>{
 	
 	private void replaceThread(int threadId) {
 		threadList.add(threadId, new Slave(threadId, latch));
+	}
+
+	public int getThreadCount() {
+		return threadCount;
+	}
+
+	public void setThreadCount(int threadCount) {
+		this.threadCount = threadCount;
 	}
 }

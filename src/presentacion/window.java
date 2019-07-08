@@ -17,9 +17,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
  
-public class window extends JPanel
-                             implements ActionListener, 
-                                        PropertyChangeListener {
+public class window extends JPanel implements ActionListener,PropertyChangeListener {
  
 	private static final long serialVersionUID = -8777720618293516863L;
 	private JProgressBar progressBar;
@@ -29,12 +27,12 @@ public class window extends JPanel
     private Controller c = Controller.getInstance();
     private JLabel imageLabel;
     private HpcAttack atacante;
-    private Future<String> result;
     private JTextField textField;
     
     class Task extends SwingWorker<Void, Void> {
     	ExecutorService servicio;
     	String ret;
+    	Future<String> result;
         /*
          * Main task. Executed in background thread.
          */
@@ -90,12 +88,13 @@ public class window extends JPanel
         progressBar = new JProgressBar(0, 100);
         progressBar.setValue(0);
         progressBar.setStringPainted(true);
+        progressBar.setForeground(Color.GRAY);
  
         JPanel panel = new JPanel();
         JPanel imagePanel = new JPanel();
         
         imageLabel = new JLabel("");
-        imageLabel.setIcon(new ImageIcon(this.getClass().getResource("/descarga.png")));
+        imageLabel.setIcon(new ImageIcon(c.getRandomCaptcha()));
                  
         btnRefresh = new JButton("Refresh");
         btnRefresh.addActionListener(new ActionListener() {
@@ -129,15 +128,18 @@ public class window extends JPanel
      */
     public void actionPerformed(ActionEvent evt) {
         startButton.setEnabled(false);
+        Integer threads;
+        progressBar.setValue(0);
+        progressBar.setForeground(Color.GRAY);
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         //Instances of javax.swing.SwingWorker are not reusuable, so
         //we create new instances as needed.
-        Integer threads;
+        /*
         if (textField.getText() != null && textField.getText().matches("-?\\d+")) {
         	threads = Integer.parseInt(textField.getText());
-        }else{
-        	threads = 3;
-        }
+        }else{*/
+        	threads = 3;/*
+        }*/
         try {        	
 			atacante = new HpcAttack(c.getShownCaptcha(),threads,false);
 		} catch (IOException e) {
@@ -157,8 +159,7 @@ public class window extends JPanel
     public void propertyChange(PropertyChangeEvent evt) {
         if ("progress" == evt.getPropertyName()) {
             int progress = (Integer) evt.getNewValue();
-            progressBar.setValue(progress);
-            
+            progressBar.setValue(progress);            
         } 
     }
  

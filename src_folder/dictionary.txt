@@ -1,5 +1,4 @@
 mono
-pepepi
 cuco
 toti
 loco
