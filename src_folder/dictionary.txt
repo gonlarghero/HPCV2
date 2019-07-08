@@ -15,7 +15,7 @@ tato
 jopo
 pomo
 paco
-pana 
+pana
 sora
 sisi
 turu
@@ -27,3 +27,5 @@ pito
 plan
 poni
 pipi
+fapa
+mopa

@@ -19,11 +19,13 @@ public class HpcAttack implements Callable<String>{
 	private BufferedImage image;
 	private static Integer totalBlocksCount = 0;
 	private static Integer currentBlock = 0;
+	private static Integer totalProcessedBlocks = 0;
 	private int threadCount;
 	private CountDownLatch latch;
 	private int wordLength = 4;
 	private String foundWord = "word not found";
 	private static boolean found = false;
+	private Semaphore totalProcessedBlocksMutex;
 	private ArrayList<Semaphore> mutexList;
 	private ArrayList<Slave> threadList;
 	private List<List<String>> blocks;
@@ -34,10 +36,14 @@ public class HpcAttack implements Callable<String>{
 	private int currentIteration = 1;
 	private int iterationCount = 10;
 	private List<String> wordList;
+	private int blocksPerIteration = 0;
 	
-	public HpcAttack(BufferedImage img, Integer threadCount,boolean bf) throws IOException {	
+	public HpcAttack(BufferedImage img, Integer threadCount,boolean bf) throws IOException {
+		found = false;
 	 	image = img;
 	 	currentBlock = 0;
+	 	totalProcessedBlocks = 0;
+	 	totalProcessedBlocksMutex = new Semaphore(1);
 		this.threadCount = threadCount;
 		if (bf) {
 			wordList = generateWordCombinations(wordLength);
@@ -194,6 +200,9 @@ public class HpcAttack implements Callable<String>{
 						}
 					}
 					processedBlocks++;
+					totalProcessedBlocksMutex.acquire();
+					totalProcessedBlocks++;
+					totalProcessedBlocksMutex.release();
 					mutexList.get(id).acquire();				
 					threadQueues.get(id).pollFirst(); // cada thread hace un poll cuando termina, no lo hace getJob
 					mutexList.get(id).release();
@@ -244,10 +253,13 @@ public class HpcAttack implements Callable<String>{
 		
 		for (int i = 0; i < threadCount; i++) {
 			threadQueues.add(i, new LinkedList<Integer>());
-			threadList.add(i, new Slave(i, latch));
 		}
 		
 		fillInQueues(-1);
+		
+		for (int i = 0; i < threadCount; i++) {
+			threadList.add(i, new Slave(i, latch));
+		}
 		
 		 try {
 			latch.await();
@@ -259,7 +271,7 @@ public class HpcAttack implements Callable<String>{
 	}
 	
 	public int progress() {
-		return currentBlock * 100 / totalBlocksCount;	
+		return totalProcessedBlocks * 100 / totalBlocksCount;	
 	}	
 	
 	class StringLengthComparator implements Comparator<String> {
@@ -292,6 +304,7 @@ public class HpcAttack implements Callable<String>{
 		// si es la primera iteración parto en partes iguales
 		if (currentIteration == 1)
 		{
+			blocksPerIteration = (int)((double)totalBlocksCount / (double)iterationCount);
 			for (int i = 0; i < threadCount; i++)
 			{
 				blocksRatioPerThread.add(i,  (double)1 / (double)threadCount);
@@ -315,13 +328,30 @@ public class HpcAttack implements Callable<String>{
 		
 		if (currentIteration <= iterationCount) // si todavía no llegó la etapa de robo
 		{
-			// agarro los bloques correspondientes a mi iteración
-			List<List<String>> iterationBlocks = blocks.subList((int)((currentIteration - 1) * ((double)totalBlocksCount / (double)iterationCount)),(int)( (currentIteration) * ((double)totalBlocksCount / (double)iterationCount)));
-			
+			int blocksInCurrentIteration;
+			if (currentIteration < iterationCount)
+			{
+				blocksInCurrentIteration = blocksPerIteration;
+			}
+			else
+			{
+				blocksInCurrentIteration = totalBlocksCount - currentBlock;
+			}
 			//asigno un poco para cada thread según su porcentaje
+			int aux = blocksInCurrentIteration;
 			for (int i = 0; i < threadCount; i++)
 			{
-				int toIndex = currentBlock + (int)(iterationBlocks.size() * blocksRatioPerThread.get(i));
+				int toIndex;
+				if (i < threadCount - 1)
+				{
+					int threadBlocks =(int)(blocksInCurrentIteration * blocksRatioPerThread.get(i));
+					toIndex = currentBlock + threadBlocks;
+					aux = aux - threadBlocks;
+				}
+				else
+				{
+					toIndex = currentBlock + aux;
+				}
 				for (int j = currentBlock; j < toIndex; j++)
 				{
 					threadQueues.get(i).add(j);				
