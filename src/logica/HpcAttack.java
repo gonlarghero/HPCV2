@@ -22,7 +22,6 @@ public class HpcAttack implements Callable<String>{
 	private static Integer totalProcessedBlocks = 0;
 	private int threadCount;
 	private CountDownLatch latch;
-	private int wordLength = 4;
 	private String foundWord = "word not found";
 	private static boolean found = false;
 	private Semaphore totalProcessedBlocksMutex;
@@ -39,6 +38,7 @@ public class HpcAttack implements Callable<String>{
 	private int blocksPerIteration = 0;
 	
 	public HpcAttack(BufferedImage img, Integer threadCount,boolean bf) throws IOException {
+		Controller c = Controller.getInstance();
 		found = false;
 	 	image = img;
 	 	currentBlock = 0;
@@ -46,88 +46,22 @@ public class HpcAttack implements Callable<String>{
 	 	totalProcessedBlocksMutex = new Semaphore(1);
 		this.threadCount = threadCount;
 		if (bf) {
-			wordList = generateWordCombinations(wordLength);
+			wordList = c.getBruteForce();
 		}else {
-			wordList = readFile("/dictionary.txt");
+			wordList = c.getDictionary();
 		}		
+		angleCombinations = c.getAngleCombinations();
+		figuresCombinations = c.getFiguresCombinations();
 		java.util.Collections.sort(wordList, new StringLengthComparator()); 
 		blocks = chopped(wordList,blockSize);
 		totalBlocksCount = blocks.size();
 		threadQueues = new ArrayList<LinkedList<Integer>>();
-		generateAngleCombinations(wordLength);
-		generateFiguresCombinations();
 		threadList = new ArrayList<Slave>();
 		mutexList = new ArrayList<Semaphore>();
 		latch = new CountDownLatch(threadCount);		
 	}
 		
-	private ArrayList<ArrayList<Double>> generateAngleCombinations(int wordLength) {
-		ArrayList<ArrayList<Double>> ret = new ArrayList<>();
-		if(wordLength != 1) {			
-			ArrayList<ArrayList<Double>> aux = generateAngleCombinations(wordLength -1);
-			for(ArrayList<Double> r:aux) {
-				for (Double rotation = -0.4; rotation < 0.4; rotation = rotation + 0.1) {
-					Double rotation_clean = Math.round(rotation * 10) / 10.0;
-					@SuppressWarnings("unchecked")
-					ArrayList<Double> clone = (ArrayList<Double>) r.clone();
-					clone.add(rotation_clean);
-					ret.add(clone);
-				}
-			}
-		}else {		
-			for (double rotation = -0.4; rotation < 0.4; rotation = rotation + 0.1) {
-				ArrayList<Double> clone = new ArrayList<>();
-				Double rotation_clean = Math.round(rotation * 10) / 10.0;
-				clone.add(rotation_clean);
-				ret.add(clone);
-			}
-		}
-		angleCombinations.add(ret);
-		return ret;
-	}
 	
-	private ArrayList<String> generateWordCombinations(int wordLength) {
-		ArrayList<String> ret = new ArrayList<>();
-		if(wordLength != 1) {			
-			ArrayList<String> aux = generateWordCombinations(wordLength -1);
-			for(String r:aux) {
-				for (int chara = 97; chara <= 122; chara++) {
-					String clone = r.concat(Character.toString((char) chara));
-					ret.add(clone);
-				}
-			}
-		}else {		
-			for (int chara = 97; chara <= 122; chara++) {
-				String clone = Character.toString((char) chara);
-				ret.add(clone);
-			}
-		}
-		wordList.addAll(ret);
-		return ret;
-	}
-	
-	private void generateFiguresCombinations() throws IOException {
-		ArrayList<String> positions = readFile("/noise-positions.txt");
-		for (int i = 0; i < positions.size(); i++)
-		{
-			ArrayList<ArrayList<Integer>> squares = new ArrayList<ArrayList<Integer>>();
-			String chosePos = positions.get(i);
-			String[] pos = chosePos.split(":");
-			String[] aux;
-			int index = 0;
-			for(String s:pos) {
-				ArrayList<Integer> coords = new ArrayList<Integer>();
-				aux = s.split(",");	
-				coords.add(0, Integer.parseInt(aux[0]));
-				coords.add(1, Integer.parseInt(aux[1]));
-				coords.add(2, Integer.parseInt(aux[2]));
-				squares.add(index, coords);
-				index++;				
-			}
-			figuresCombinations.add(i,squares);
-		}
-		
-	}
 	
 	private void getJob(Slave slave){
 		try {			
@@ -147,20 +81,6 @@ public class HpcAttack implements Callable<String>{
 		}
 	}
 
-	private static ArrayList<String> readFile(String name) throws IOException {
-		ArrayList<String> wordList = new ArrayList<String>();
-		InputStream is = new FileInputStream(captchaGenerator.class.getResource(name).getPath());
-		BufferedReader buf = new BufferedReader(new InputStreamReader(is));
-		String line = buf.readLine();
-
-		while (line != null) {
-			wordList.add(line);
-			line = buf.readLine();
-		}
-		buf.close();
-		return wordList;
-	}
-	
 	public class Slave implements Runnable {
 		Thread t;
 		int id;

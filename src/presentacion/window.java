@@ -24,10 +24,11 @@ public class window extends JPanel implements ActionListener,PropertyChangeListe
     private JButton startButton;
     private Task task;
     private JButton btnRefresh;
-    private Controller c = Controller.getInstance();
+    private Controller c;
     private JLabel imageLabel;
     private HpcAttack atacante;
     private JTextField textField;
+    private JComboBox<String> comboBox;
     
     class Task extends SwingWorker<Void, Void> {
     	ExecutorService servicio;
@@ -65,21 +66,20 @@ public class window extends JPanel implements ActionListener,PropertyChangeListe
             Toolkit.getDefaultToolkit().beep();
             startButton.setEnabled(true);
             setCursor(null); //turn off the wait cursor
-            servicio.shutdown();
-            if (ret.equals("word not found")) {
-            	ret += " \n ¿desea atacar por fuerza bruta?";
-            	int reply = JOptionPane.showConfirmDialog(null, ret, "Resultado", JOptionPane.YES_NO_OPTION);
-                if (reply == JOptionPane.YES_OPTION) {
-                  JOptionPane.showMessageDialog(null, "FUERZA BRUTA :v");
-                }
-            }else {
-            	JOptionPane.showMessageDialog(null, ret, "Resultado", JOptionPane.INFORMATION_MESSAGE);
-            }
+            servicio.shutdown();           
+            JOptionPane.showMessageDialog(null, ret, "Resultado", JOptionPane.INFORMATION_MESSAGE);
         }
     }
  
-    public window() {
+    public window() {    	
+    	
         super(new BorderLayout());
+        
+        try {
+			c = Controller.getInstance();
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
         //Create the demo's UI.
         startButton = new JButton("Start");
         startButton.setActionCommand("start");
@@ -95,20 +95,11 @@ public class window extends JPanel implements ActionListener,PropertyChangeListe
         
         imageLabel = new JLabel("");
         imageLabel.setIcon(new ImageIcon(c.getRandomCaptcha()));
-                 
-        btnRefresh = new JButton("Refresh");
-        btnRefresh.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent e) {
-        		String t = textField.getText();
-        		if(t == null || t.trim().equals("") || t.matches("-?\\d+")) {
-        			imageLabel.setIcon(new ImageIcon(c.getRandomCaptcha()));
-        		}else {
-        			imageLabel.setIcon(new ImageIcon(c.getCaptchaFromString(t)));
-        		}
-        	}
-        });
         
-        panel.add(btnRefresh);
+        comboBox = new JComboBox<String>();
+        comboBox.addItem("Diccionario");
+        comboBox.addItem("Fuerza Bruta");
+        panel.add(comboBox);
         panel.add(startButton);
         
         textField = new JTextField();
@@ -121,6 +112,19 @@ public class window extends JPanel implements ActionListener,PropertyChangeListe
         add(imagePanel, BorderLayout.CENTER);
        
         setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
+        btnRefresh = new JButton("Refresh");
+        add(btnRefresh, BorderLayout.SOUTH);
+        btnRefresh.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		String t = textField.getText();
+        		if(t == null || t.trim().equals("") || t.matches("-?\\d+")) {
+        			imageLabel.setIcon(new ImageIcon(c.getRandomCaptcha()));
+        		}else {
+        			imageLabel.setIcon(new ImageIcon(c.getCaptchaFromString(t)));
+        		}
+        	}
+        });
      }
  
     /**
@@ -129,8 +133,15 @@ public class window extends JPanel implements ActionListener,PropertyChangeListe
     public void actionPerformed(ActionEvent evt) {
         startButton.setEnabled(false);
         Integer threads;
+        Boolean fb;
         progressBar.setValue(0);
-        progressBar.setForeground(Color.GRAY);
+        if (comboBox.getSelectedItem().equals("Diccionario")) {
+        	progressBar.setForeground(Color.GRAY);
+        	fb = false;
+        }else {
+        	progressBar.setForeground(Color.RED);
+        	fb = true;
+        }        
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         //Instances of javax.swing.SwingWorker are not reusuable, so
         //we create new instances as needed.
@@ -141,7 +152,7 @@ public class window extends JPanel implements ActionListener,PropertyChangeListe
         	threads = 3;
         }
         try {        	
-			atacante = new HpcAttack(c.getShownCaptcha(),threads,false);
+			atacante = new HpcAttack(c.getShownCaptcha(),threads,fb);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
