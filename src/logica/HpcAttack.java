@@ -36,8 +36,9 @@ public class HpcAttack implements Callable<String>{
 	private int iterationCount = 10;
 	private List<String> wordList;
 	private int blocksPerIteration = 0;
+	private boolean staticQueues;
 	
-	public HpcAttack(BufferedImage img, Integer threadCount,boolean bf) throws IOException {
+	public HpcAttack(BufferedImage img, Integer threadCount,boolean bf, boolean staticQueues) throws IOException {
 		Controller c = Controller.getInstance();
 		found = false;
 	 	image = img;
@@ -58,7 +59,8 @@ public class HpcAttack implements Callable<String>{
 		threadQueues = new ArrayList<LinkedList<Integer>>();
 		threadList = new ArrayList<Slave>();
 		mutexList = new ArrayList<Semaphore>();
-		latch = new CountDownLatch(threadCount);		
+		latch = new CountDownLatch(threadCount);
+		this.staticQueues = staticQueues;
 	}
 		
 	
@@ -72,8 +74,12 @@ public class HpcAttack implements Callable<String>{
 			else if (found) {
 				slave.currentBlock = -1;
 			}
-			else {
+			else if (!staticQueues){
 				fillInQueues(slave.id);
+			}
+			else
+			{
+				slave.currentBlock = -1;
 			}
         }
 		catch (Exception x) {
@@ -249,7 +255,7 @@ public class HpcAttack implements Callable<String>{
 		if (currentIteration <= iterationCount) // si todavía no llegó la etapa de robo
 		{
 			int blocksInCurrentIteration;
-			if (currentIteration < iterationCount)
+			if (!staticQueues && currentIteration < iterationCount)
 			{
 				blocksInCurrentIteration = blocksPerIteration;
 			}

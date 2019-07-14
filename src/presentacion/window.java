@@ -152,7 +152,7 @@ public class window extends JPanel implements ActionListener,PropertyChangeListe
         	threads = 3;
         }
         try {        	
-			atacante = new HpcAttack(c.getShownCaptcha(),threads,fb);
+			atacante = new HpcAttack(c.getShownCaptcha(),threads,fb, false);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
