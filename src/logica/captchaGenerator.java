@@ -54,7 +54,7 @@ public class captchaGenerator {
 			int fontHeight = fontMetrics.getHeight();
 
 			// toma la palabra del diccionario
-			ArrayList<String> wordList = readFile("/dictionary.txt");
+			ArrayList<String> wordList = readFile("/dictionary5.txt");
 			index = (int) (Math.random() * wordList.size());
 			String word = wordList.get(index);
 			StringBuffer finalString = new StringBuffer();

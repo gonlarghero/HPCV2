@@ -149,7 +149,7 @@ public class window extends JPanel implements ActionListener,PropertyChangeListe
         if (textField.getText() != null && textField.getText().matches("-?\\d+")) {
         	threads = Integer.parseInt(textField.getText());
         }else{
-        	threads = 3;
+        	threads = 4;
         }
         try {        	
 			atacante = new HpcAttack(c.getShownCaptcha(),threads,fb, false);

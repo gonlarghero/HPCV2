@@ -13,7 +13,7 @@ import java.util.List;
 
 public class Controller{
 	
-	private static int wordLength = 4;
+	private static int wordLength = 5;
 	private BufferedImage shownCaptcha;
 	private static ArrayList<ArrayList<ArrayList<Double>>> angleCombinations = new ArrayList<ArrayList<ArrayList<Double>>>();
 	private static ArrayList<ArrayList<ArrayList<Integer>>> figuresCombinations = new ArrayList<ArrayList<ArrayList<Integer>>>();
@@ -25,7 +25,7 @@ public class Controller{
 		if (instance == null) {
 			instance = new Controller();
 			generateAngleCombinations(wordLength);
-			dictionary = readFile("/dictionary.txt");
+			dictionary = readFile("/dictionary5.txt");
 			generateWordCombinations(wordLength);
 			generateFiguresCombinations();
 		}
