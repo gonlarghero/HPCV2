@@ -54,7 +54,7 @@ public class captchaGenerator {
 			int fontHeight = fontMetrics.getHeight();
 
 			// toma la palabra del diccionario
-			ArrayList<String> wordList = readFile("/dictionary5.txt");
+			ArrayList<String> wordList = readFile("/dictionary4.txt");
 			index = (int) (Math.random() * wordList.size());
 			String word = wordList.get(index);
 			StringBuffer finalString = new StringBuffer();
@@ -244,7 +244,7 @@ public class captchaGenerator {
 
 	private static ArrayList<String> readFile(String name) throws IOException {
 		ArrayList<String> wordList = new ArrayList<String>();
-		InputStream is = new FileInputStream(captchaGenerator.class.getResource(name).getPath());
+		InputStream is = captchaGenerator.class.getResourceAsStream(name);
 		BufferedReader buf = new BufferedReader(new InputStreamReader(is));
 		String line = buf.readLine();
 

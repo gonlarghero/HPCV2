@@ -39,8 +39,8 @@ public class HpcAttack implements Callable<String>{
 	private int blocksPerIteration = 0;
 	private boolean staticQueues;
 	
-	public HpcAttack(BufferedImage img, Integer threadCount,boolean bf, boolean staticQueues) throws IOException {
-		Controller c = Controller.getInstance();
+	public HpcAttack(BufferedImage img, Integer threadCount,boolean bf, boolean staticQueues, int wordLength) throws IOException {
+		Controller c = Controller.getInstance(wordLength);
 		found = false;
 	 	image = img;
 	 	currentBlock = 0;
@@ -129,6 +129,7 @@ public class HpcAttack implements Callable<String>{
 					processedBlocks++;
 					totalProcessedBlocksMutex.acquire();
 					totalProcessedBlocks++;
+					System.out.print("Processed Blocks: " + totalProcessedBlocks);
 					totalProcessedBlocksMutex.release();
 					mutexList.get(id).acquire();				
 					threadQueues.get(id).pollFirst(); // cada thread hace un poll cuando termina, no lo hace getJob

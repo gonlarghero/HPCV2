@@ -13,7 +13,7 @@ import java.util.List;
 
 public class Controller{
 	
-	private static int wordLength = 5;
+	private static int wordLength;
 	private BufferedImage shownCaptcha;
 	private static ArrayList<ArrayList<ArrayList<Double>>> angleCombinations = new ArrayList<ArrayList<ArrayList<Double>>>();
 	private static ArrayList<ArrayList<ArrayList<Integer>>> figuresCombinations = new ArrayList<ArrayList<ArrayList<Integer>>>();
@@ -21,11 +21,12 @@ public class Controller{
 	private static List<String> bruteForce = new ArrayList<String>();
 	private static Controller instance;
 	
-	public static Controller getInstance() throws IOException {
+	public static Controller getInstance(int _wordLength) throws IOException {
 		if (instance == null) {
 			instance = new Controller();
+			wordLength = _wordLength;
 			generateAngleCombinations(wordLength);
-			dictionary = readFile("/dictionary5.txt");
+			dictionary = readFile("/dictionary" + wordLength + ".txt");
 			generateWordCombinations(wordLength);
 			generateFiguresCombinations();
 		}
@@ -118,7 +119,7 @@ public class Controller{
 	
 	private static ArrayList<String> readFile(String name) throws IOException {
 		ArrayList<String> wordList = new ArrayList<String>();
-		InputStream is = new FileInputStream(captchaGenerator.class.getResource(name).getPath());
+		InputStream is = captchaGenerator.class.getResourceAsStream(name);
 		BufferedReader buf = new BufferedReader(new InputStreamReader(is));
 		String line = buf.readLine();
 
