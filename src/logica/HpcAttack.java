@@ -27,7 +27,7 @@ public class HpcAttack implements Callable<String>{
 	private List<LinkedList<Integer>> threadQueues;
 	private ArrayList<ArrayList<ArrayList<Double>>> angleCombinations = new ArrayList<ArrayList<ArrayList<Double>>>();
 	private ArrayList<ArrayList<ArrayList<Integer>>> figuresCombinations = new ArrayList<ArrayList<ArrayList<Integer>>>();
-	private int blockSize = 1;
+	private int blockSize = 4;
 	private int currentIteration = 1;
 	private int iterationCount = 10;
 	private List<String> wordList;
@@ -124,7 +124,7 @@ public class HpcAttack implements Callable<String>{
 					processedBlocks++;
 					totalProcessedBlocksMutex.acquire();
 					totalProcessedBlocks++;
-					System.out.print("Processed Blocks: " + totalProcessedBlocks);
+					//System.out.println("Processed Blocks: " + totalProcessedBlocks);
 					totalProcessedBlocksMutex.release();
 					mutexList.get(id).acquire();				
 					threadQueues.get(id).pollFirst(); // cada thread hace un poll cuando termina, no lo hace getJob
