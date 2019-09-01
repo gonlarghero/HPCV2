@@ -168,7 +168,6 @@ public class captchaGenerator {
 			g.drawRect(0, 0, width - 1, height - 1);
 			g.dispose();
 			captchaString = finalString.toString();
-			System.out.println(captchaString);
 			return bufferedImage;
 		} catch (Exception ioe) {
 			throw new RuntimeException("Unable to build image", ioe);

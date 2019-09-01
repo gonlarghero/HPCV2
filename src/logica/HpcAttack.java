@@ -34,8 +34,7 @@ public class HpcAttack implements Callable<String>{
 	private int blocksPerIteration = 0;
 	private boolean staticQueues;
 	
-	public HpcAttack(BufferedImage img, Integer threadCount,boolean bf, boolean staticQueues, int wordLength) throws IOException {
-		Controller c = Controller.getInstance(wordLength);
+	public HpcAttack(BufferedImage img, Integer threadCount,boolean bf, boolean staticQueues, int wordLength, Controller c) throws IOException {
 		found = false;
 	 	image = img;
 	 	currentBlock = 0;

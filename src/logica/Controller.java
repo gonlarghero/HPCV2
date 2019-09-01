@@ -18,21 +18,13 @@ public class Controller{
 	private static ArrayList<ArrayList<ArrayList<Integer>>> figuresCombinations = new ArrayList<ArrayList<ArrayList<Integer>>>();
 	private static List<String> dictionary = new ArrayList<String>();
 	private static List<String> bruteForce = new ArrayList<String>();
-	private static Controller instance;
 	
-	public static Controller getInstance(int _wordLength) throws IOException {
-		if (instance == null) {
-			instance = new Controller();
-			wordLength = _wordLength;
-			generateAngleCombinations(wordLength);
-			dictionary = readFile("/dictionary" + wordLength + ".txt");
-			generateWordCombinations(wordLength);
-			generateFiguresCombinations();
-		}
-		return instance;
-	}
-	
-	private Controller() {
+	public Controller (int _wordLength) throws IOException {
+		wordLength = _wordLength;
+		generateAngleCombinations(wordLength);
+		dictionary = readFile("/dictionary" + wordLength + ".txt");
+		generateWordCombinations(wordLength);
+		generateFiguresCombinations();
 		setShownCaptcha(null);
 	}
 	
