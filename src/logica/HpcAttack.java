@@ -13,13 +13,13 @@ import java.util.concurrent.Semaphore;
 public class HpcAttack implements Callable<String>{
 	
 	private BufferedImage image;
-	private static Integer totalBlocksCount = 0;
-	private static Integer currentBlock = 0;
-	private static Integer totalProcessedBlocks = 0;
+	private Integer totalBlocksCount = 0;
+	private Integer currentBlock = 0;
+	private Integer totalProcessedBlocks = 0;
 	private int threadCount;
 	private CountDownLatch latch;
 	private String foundWord = "word not found";
-	private static boolean found = false;
+	private boolean found = false;
 	private Semaphore totalProcessedBlocksMutex;
 	private ArrayList<Semaphore> mutexList;
 	private ArrayList<Slave> threadList;
@@ -159,12 +159,12 @@ public class HpcAttack implements Callable<String>{
 			}
 	}	
 
-	public static boolean isFound() {
+	public boolean isFound() {
 		return found;
 	}
 
-	public static void setFound(boolean found) {
-		HpcAttack.found = found;
+	public void setFound(boolean found) {
+		this.found = found;
 	}
 
 	@Override

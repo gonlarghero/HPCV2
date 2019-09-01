@@ -20,6 +20,7 @@ public class Main {
 						new ArrayList<String>(Arrays.asList("4", "true", "false", "1oo")),
 						//new ArrayList<String>(Arrays.asList("4", "true", "true", "1ooo")),
 						//new ArrayList<String>(Arrays.asList("4", "true", "false", "1ooo")),
+						
 						//new ArrayList<String>(Arrays.asList("4", "false", "true", "1oo")),
 						new ArrayList<String>(Arrays.asList("4", "false", "false", "1oo"))
 						//new ArrayList<String>(Arrays.asList("4", "false", "true", "1ooo")),
@@ -75,7 +76,7 @@ public class Main {
 			long time1 = System.currentTimeMillis();
 			Future<String> result = executor.submit(hpc);
 			word = result.get();
-			executor.shutdown();
+			executor.shutdownNow();
 			long time2 = System.currentTimeMillis();
 			long res = (time2 - time1) / 1000;
 			System.out.println(res + " segundos");

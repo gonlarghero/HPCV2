@@ -12,12 +12,12 @@ import java.util.List;
 
 public class Controller{
 	
-	private static int wordLength;
+	private int wordLength;
 	private BufferedImage shownCaptcha;
-	private static ArrayList<ArrayList<ArrayList<Double>>> angleCombinations = new ArrayList<ArrayList<ArrayList<Double>>>();
-	private static ArrayList<ArrayList<ArrayList<Integer>>> figuresCombinations = new ArrayList<ArrayList<ArrayList<Integer>>>();
-	private static List<String> dictionary = new ArrayList<String>();
-	private static List<String> bruteForce = new ArrayList<String>();
+	private ArrayList<ArrayList<ArrayList<Double>>> angleCombinations = new ArrayList<ArrayList<ArrayList<Double>>>();
+	private ArrayList<ArrayList<ArrayList<Integer>>> figuresCombinations = new ArrayList<ArrayList<ArrayList<Integer>>>();
+	private List<String> dictionary = new ArrayList<String>();
+	private List<String> bruteForce = new ArrayList<String>();
 	
 	public Controller (int _wordLength) throws IOException {
 		wordLength = _wordLength;
@@ -40,7 +40,7 @@ public class Controller{
 		return buff.getScaledInstance(250, 150,  0);
 	}
 	
-	private static ArrayList<ArrayList<Double>> generateAngleCombinations(int wordLength) {
+	private ArrayList<ArrayList<Double>> generateAngleCombinations(int wordLength) {
 		ArrayList<ArrayList<Double>> ret = new ArrayList<>();
 		if(wordLength != 1) {			
 			ArrayList<ArrayList<Double>> aux = generateAngleCombinations(wordLength -1);
@@ -61,11 +61,11 @@ public class Controller{
 				ret.add(clone);
 			}
 		}
-		angleCombinations.add(ret);
+		this.angleCombinations.add(ret);
 		return ret;
 	}
 	
-	private static ArrayList<String> generateWordCombinations(int wordLength) {
+	private ArrayList<String> generateWordCombinations(int wordLength) {
 		ArrayList<String> ret = new ArrayList<>();
 		if(wordLength != 1) {			
 			ArrayList<String> aux = generateWordCombinations(wordLength -1);
@@ -85,7 +85,7 @@ public class Controller{
 		return ret;
 	}
 	
-	private static void generateFiguresCombinations() throws IOException {
+	private void generateFiguresCombinations() throws IOException {
 		ArrayList<String> positions = readFile("/noise-positions.txt");
 		for (int i = 0; i < positions.size(); i++)
 		{
@@ -108,7 +108,7 @@ public class Controller{
 		
 	}
 	
-	private static ArrayList<String> readFile(String name) throws IOException {
+	private ArrayList<String> readFile(String name) throws IOException {
 		ArrayList<String> wordList = new ArrayList<String>();
 		InputStream is = captchaGenerator.class.getResourceAsStream(name);
 		BufferedReader buf = new BufferedReader(new InputStreamReader(is));
@@ -153,19 +153,19 @@ public class Controller{
 	}
 
 	public void setAngleCombinations(ArrayList<ArrayList<ArrayList<Double>>> angleCombinations) {
-		Controller.angleCombinations = angleCombinations;
+		this.angleCombinations = angleCombinations;
 	}
 
 	public void setFiguresCombinations(ArrayList<ArrayList<ArrayList<Integer>>> figuresCombinations) {
-		Controller.figuresCombinations = figuresCombinations;
+		this.figuresCombinations = figuresCombinations;
 	}
 
 	public void setDictionary(List<String> dictionary) {
-		Controller.dictionary = dictionary;
+		this.dictionary = dictionary;
 	}
 
 	public void setBruteForce(List<String> bruteForce) {
-		Controller.bruteForce = bruteForce;
+		this.bruteForce = bruteForce;
 	}
 
 }
